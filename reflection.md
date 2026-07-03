@@ -33,7 +33,6 @@
 - What classes did you include, and what responsibilities did you assign to each?
     Class: Owner
         Attributes: 
-            Id: int, 
             First name: string, 
             Last name: string, 
             Email: string, 
@@ -45,7 +44,6 @@
 
     Class: Pet
         Attributes: 
-            Id: int, 
             Name: string, 
             Type: string, 
             Age: int, 
@@ -57,14 +55,12 @@
         Attributes: 
             Type: string (walk, feed, meds), 
             Frequency: enum (daily, weekly), 
-            PetId: int, 
-            Scheduler: Scheduler
+            Duration: int,
+            Priority: enum (low, medium, high), 
         Methods:
-            addScheduler(Scheduler scheduler): void
     
     Class: Scheduler
         Attributes: 
-            Priority: enum (low, medium, high), 
             AvailableStartTime: datetime
             AvailableEndTime: datetime
     
@@ -72,12 +68,11 @@
         Attributes: 
             Id: int, 
             PetId: int, 
-            PlanId: int, 
             taskList: List[Task, time],
             Explanation: string 
 
     Relationship:
-        - Owner --> pet (association). Owner has a pet (1:1)
+        - Owner --> pet (association). Owner has a pet (1:n)
         - Pet can have multiple Tasks (1:n)
         - Each owner has a Scheduler (1:n)
         - Each Task has a Scheduler
@@ -94,6 +89,7 @@
             +string lastName
             +string email
             +Scheduler scheduler
+            +List~Pet~ pets
             +addPet(pet: Pet): void
             +addScheduler(scheduler: Scheduler): void
             +generatePlan(): Plan
@@ -104,36 +100,55 @@
             +string name
             +string type
             +int age
-            +int ownerId
+            +List~Task~ tasks
             +addTask(task: Task): void
         }
 
         class Task {
-            +string type
-            +string frequency
-            +int petId
-            +Scheduler scheduler
-            +addScheduler(scheduler: Scheduler): void
+            +TaskType type
+            +int frequency
+            +int durationMinutes
+            +Priority priority
+        }
+
+        class Priority {
+            <<enumeration>>
+            LOW
+            MEDIUM
+            HIGH
+        }
+
+        class TaskType {
+            <<enumeration>>
+            WALKS
+            FEEDING
+            BATHROOM_BREAKS
+            MENTAL_PLAY
+            GROOMING
+            MEDICATIONS
+            VET_APPOINTMENT
+        }
+
+        class TimeSlot {
+            +datetime startTime
+            +datetime endTime
         }
 
         class Scheduler {
-            +string priority
-            +datetime availableStartTime
-            +datetime availableEndTime
+            +List~TimeSlot~ timeSlots
+            +buildPlan(pets: List~Pet~): Plan
         }
 
         class Plan {
             +int id
-            +int petId
-            +int planId
-            +List~Task~ taskList
+            +Map~string_List~Task~~ taskListByPet
             +string explanation
         }
 
-        Owner --> Pet : owns
+        Owner "1" --> "*" Pet : owns
         Pet --> Task : has
         Owner --> Scheduler : has
-        Task --> Scheduler : uses
+        Scheduler --> TimeSlot : uses
         Owner --> Plan : generates
         Plan --> Task : contains
     ```
@@ -142,7 +157,8 @@
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
-
+1. Added duration to Task. Without it, scheduler/plan can't decide if task will fit in available window.
+2. Added a build_plan method to Scheduler to move the responsibility of building the plan outside of Owner. Reasoning - Owner is not responsible for all logic.
 ---
 
 ## 2. Scheduling Logic and Tradeoffs

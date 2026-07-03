@@ -5,6 +5,7 @@ classDiagram
         +string lastName
         +string email
         +Scheduler scheduler
+        +List~Pet~ pets
         +addPet(pet: Pet): void
         +addScheduler(scheduler: Scheduler): void
         +generatePlan(): Plan
@@ -15,35 +16,54 @@ classDiagram
         +string name
         +string type
         +int age
-        +int ownerId
+        +List~Task~ tasks
         +addTask(task: Task): void
     }
 
     class Task {
-        +string type
-        +string frequency
-        +int petId
-        +Scheduler scheduler
-        +addScheduler(scheduler: Scheduler): void
+        +TaskType type
+        +int frequency
+        +int durationMinutes
+        +Priority priority
+    }
+
+    class Priority {
+        <<enumeration>>
+        LOW
+        MEDIUM
+        HIGH
+    }
+
+    class TaskType {
+        <<enumeration>>
+        WALKS
+        FEEDING
+        BATHROOM_BREAKS
+        MENTAL_PLAY
+        GROOMING
+        MEDICATIONS
+        VET_APPOINTMENT
+    }
+
+    class TimeSlot {
+        +datetime startTime
+        +datetime endTime
     }
 
     class Scheduler {
-        +string priority
-        +datetime availableStartTime
-        +datetime availableEndTime
+        +List~TimeSlot~ timeSlots
+        +buildPlan(pets: List~Pet~): Plan
     }
 
     class Plan {
         +int id
-        +int petId
-        +int planId
-        +List~Task~ taskList
+        +Map~string_List~Task~~ taskListByPet
         +string explanation
     }
 
-    Owner --> Pet : owns
+    Owner "1" --> "*" Pet : owns
     Pet --> Task : has
     Owner --> Scheduler : has
-    Task --> Scheduler : uses
+    Scheduler --> TimeSlot : uses
     Owner --> Plan : generates
     Plan --> Task : contains
