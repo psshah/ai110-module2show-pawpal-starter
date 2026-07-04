@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Optional
 
@@ -61,11 +61,12 @@ class Scheduler:
 
         All tasks across all pets compete for the same slots.
         Tasks sorted HIGH→MEDIUM→LOW priority; ties broken by shortest total cost first.
+        Occurrences are interleaved across slots (one round per slot) so tasks spread
+        throughout the day rather than being packed into the earliest slot.
         Results grouped by pet name in the plan. Skipped occurrences noted in explanation.
         """
         priority_order = {Priority.HIGH: 0, Priority.MEDIUM: 1, Priority.LOW: 2}
 
-        # Pair every task with its pet name for tracking after scheduling
         all_tasks: list[tuple[Task, str]] = [
             (task, pet.name)
             for pet in pets
@@ -77,40 +78,61 @@ class Scheduler:
             key=lambda tp: (priority_order[tp[0].priority], tp[0].frequency * tp[0].duration_minutes),
         )
 
-        slot_remaining = [slot.available_minutes for slot in self.time_slots]
-        total_available = sum(slot_remaining)
+        max_freq = max((t.frequency for t, _ in all_tasks), default=0)
+        total_available = sum(slot.available_minutes for slot in self.time_slots)
 
-        scheduled_by_pet: dict[str, list[Task]] = {pet.name: [] for pet in pets}
+        # Track the current fill position (time) and remaining minutes for each slot
+        slot_cursor: list[datetime] = [slot.start_time for slot in self.time_slots]
+        slot_remaining: list[float] = [slot.available_minutes for slot in self.time_slots]
+
+        scheduled_items: list[ScheduledTask] = []
+        skipped_lines: list[str] = []
+
+        # Each occurrence round starts at the next slot so tasks spread across the day.
+        # Round 0 → slot 0, round 1 → slot 1, etc. Overflow to later slots if a task
+        # doesn't fit in the round's preferred slot.
+        for occurrence_idx in range(max_freq):
+            start_slot = min(occurrence_idx, len(self.time_slots) - 1)
+            for task, pet_name in sorted_tasks:
+                if task.frequency <= occurrence_idx:
+                    continue
+                placed = False
+                for i in range(start_slot, len(self.time_slots)):
+                    if slot_remaining[i] >= task.duration_minutes:
+                        start = slot_cursor[i]
+                        end = start + timedelta(minutes=task.duration_minutes)
+                        scheduled_items.append(
+                            ScheduledTask(task=task, pet_name=pet_name, start_time=start, end_time=end)
+                        )
+                        slot_cursor[i] = end
+                        slot_remaining[i] -= task.duration_minutes
+                        placed = True
+                        break
+                if not placed:
+                    skipped_lines.append(
+                        f"  ✗ [{pet_name}] {task.type.value} occurrence {occurrence_idx + 1} skipped — "
+                        f"no slot had {task.duration_minutes} min remaining"
+                    )
+
+        scheduled_items.sort(key=lambda x: x.start_time)
+
+        scheduled_by_pet: dict[str, list[ScheduledTask]] = {pet.name: [] for pet in pets}
+        for si in scheduled_items:
+            scheduled_by_pet[si.pet_name].append(si)
+
+        total_used = total_available - sum(slot_remaining)
+
         explanation_lines: list[str] = [
             f"Owner plan | {total_available:.0f} min available across {len(self.time_slots)} slot(s)",
             f"Pets: {', '.join(pet.name for pet in pets)}",
             "",
         ]
-
-        for task, pet_name in sorted_tasks:
-            scheduled_count = 0
-            for _ in range(task.frequency):
-                for i in range(len(self.time_slots)):
-                    if slot_remaining[i] >= task.duration_minutes:
-                        scheduled_by_pet[pet_name].append(task)
-                        slot_remaining[i] -= task.duration_minutes
-                        scheduled_count += 1
-                        break
-
-            skipped_count = task.frequency - scheduled_count
-
-            if scheduled_count > 0:
-                explanation_lines.append(
-                    f"  ✓ [{pet_name}] {task.type.value} | priority: {task.priority.value} | "
-                    f"{scheduled_count}/{task.frequency}x {task.duration_minutes} min each"
-                )
-            if skipped_count > 0:
-                explanation_lines.append(
-                    f"  ✗ [{pet_name}] {task.type.value} | {skipped_count} occurrence(s) skipped — "
-                    f"no slot had {task.duration_minutes} min remaining"
-                )
-
-        total_used = total_available - sum(slot_remaining)
+        for si in scheduled_items:
+            explanation_lines.append(
+                f"  [{si.pet_name}] {si.task.type.value} | "
+                f"{si.start_time.strftime('%-I:%M %p')} – {si.end_time.strftime('%-I:%M %p')}"
+            )
+        explanation_lines += skipped_lines
         explanation_lines += [
             "",
             f"Summary: {total_used:.0f}/{total_available:.0f} min used.",
@@ -143,10 +165,10 @@ class Task:
 class Pet:
     """A pet belonging to an owner."""
 
-    id: int
+    #id: int
     name: str
     type: str
-    age: int
+    #age: int
     tasks: list[Task] = field(default_factory=list)
 
     def add_task(self, task: Task) -> None:
@@ -157,11 +179,21 @@ class Pet:
 
 
 @dataclass
+class ScheduledTask:
+    """A single task occurrence assigned to a concrete time window."""
+
+    task: Task
+    pet_name: str
+    start_time: datetime
+    end_time: datetime
+
+
+@dataclass
 class Plan:
     """A generated daily care plan for an owner, grouping scheduled tasks by pet."""
 
     id: int
-    task_list_by_pet: dict[str, list[Task]] = field(default_factory=dict)
+    task_list_by_pet: dict[str, list[ScheduledTask]] = field(default_factory=dict)
     explanation: str = ""
 
 
@@ -170,7 +202,7 @@ class Owner:
 
     def __init__(
         self,
-        id: int,
+        #id: int,
         first_name: str,
         last_name: str,
         email: str,
