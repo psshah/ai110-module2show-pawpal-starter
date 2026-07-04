@@ -46,8 +46,6 @@
         Attributes: 
             Name: string, 
             Type: string, 
-            Age: int, 
-            OwnerId: int
         Method:
             addTask(Task task): void
 
@@ -84,7 +82,6 @@
     ```mermaid
     classDiagram
         class Owner {
-            +int id
             +string firstName
             +string lastName
             +string email
@@ -96,10 +93,8 @@
         }
 
         class Pet {
-            +int id
             +string name
             +string type
-            +int age
             +List~Task~ tasks
             +addTask(task: Task): void
         }

@@ -1,6 +1,5 @@
 classDiagram
     class Owner {
-        +int id
         +string firstName
         +string lastName
         +string email
@@ -12,10 +11,8 @@ classDiagram
     }
 
     class Pet {
-        +int id
         +string name
         +string type
-        +int age
         +List~Task~ tasks
         +addTask(task: Task): void
     }

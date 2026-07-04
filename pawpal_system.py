@@ -36,6 +36,7 @@ class TimeSlot:
     end_time: datetime
 
     def __post_init__(self) -> None:
+        """Validate that start_time is before end_time."""
         if self.start_time >= self.end_time:
             raise ValueError(
                 f"start_time must be before end_time, got {self.start_time} >= {self.end_time}"
@@ -43,6 +44,7 @@ class TimeSlot:
 
     @property
     def available_minutes(self) -> float:
+        """Return the length of this time slot in minutes."""
         return (self.end_time - self.start_time).total_seconds() / 60
 
 
@@ -53,6 +55,7 @@ class Scheduler:
     time_slots: list[TimeSlot]
 
     def __post_init__(self) -> None:
+        """Validate that at least one time slot is provided."""
         if not self.time_slots:
             raise ValueError("Scheduler must have at least one time slot.")
 
@@ -153,6 +156,7 @@ class Task:
     priority: Priority
 
     def __post_init__(self) -> None:
+        """Validate frequency, priority, and task type values."""
         if not (0 < self.frequency < 10):
             raise ValueError(f"frequency must be between 1 and 9, got {self.frequency}")
         if not isinstance(self.priority, Priority):
@@ -165,10 +169,8 @@ class Task:
 class Pet:
     """A pet belonging to an owner."""
 
-    #id: int
     name: str
     type: str
-    #age: int
     tasks: list[Task] = field(default_factory=list)
 
     def add_task(self, task: Task) -> None:
@@ -202,13 +204,12 @@ class Owner:
 
     def __init__(
         self,
-        #id: int,
         first_name: str,
         last_name: str,
         email: str,
         scheduler: Optional[Scheduler] = None,
     ) -> None:
-        self.id: int = id
+        """Create a new owner with an empty pet list and optional scheduler."""
         self.first_name: str = first_name
         self.last_name: str = last_name
         self.email: str = email
