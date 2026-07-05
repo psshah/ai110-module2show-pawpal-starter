@@ -80,7 +80,7 @@ class Scheduler:
             all_tasks,
             key=lambda tp: (priority_order[tp[0].priority], tp[0].frequency * tp[0].duration_minutes),
         )
-
+        
         max_freq = max((t.frequency for t, _ in all_tasks), default=0)
         total_available = sum(slot.available_minutes for slot in self.time_slots)
 
