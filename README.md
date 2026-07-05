@@ -12,6 +12,18 @@ A busy pet owner needs help staying consistent with pet care. They want an assis
 
 Your job is to design the system first (UML), then implement the logic in Python, then connect it to the Streamlit UI.
 
+## ✨ Features
+
+- **Owner & pet management** — Create an owner with name and email, add multiple pets (by name and species), and associate them all under one profile
+- **Flexible task definition** — Each task has a type (walk, feeding, grooming, etc.), duration in minutes, priority level (HIGH / MEDIUM / LOW), and a daily frequency
+- **Priority-aware scheduling** — Tasks are scheduled HIGH → MEDIUM → LOW; within the same priority, shorter tasks (by total cost = frequency × duration) are placed first to maximize slot utilization
+- **Recurring task distribution** — Tasks that repeat during the day are automatically spread across available time slots rather than being packed into the earliest window
+- **Greedy slot filling** — The scheduler tracks remaining minutes per slot and places each task occurrence in the first slot with enough time; overflow moves to the next slot automatically
+- **Graceful skipping** — If a task occurrence doesn't fit in any slot, it is skipped and recorded in the plan explanation with the reason
+- **Human-readable plan explanation** — Each generated plan includes a timestamped schedule per pet, a summary of minutes used vs. available, and notes on any skipped tasks
+- **Time slot flexibility** — Owners can define multiple availability windows per day (e.g. a morning block and an evening block)
+- **Input validation** — Task frequency, priority, and type are validated at creation time; time slots enforce start < end
+
 ## What you will build
 
 Your final app should:
@@ -110,38 +122,27 @@ collected 5 items
 tests/test_pawpal.py .....                                                                                                                    [100%]
 
 ================================================================= 5 passed in 0.02s =================================================================```
+```
 
-## 📐 Scheduling Algorithm — `Scheduler.build_plan`
+## 📐 Scheduling Algorithm
 
-The core scheduling logic lives in `Scheduler.build_plan()` in [pawpal_system.py](pawpal_system.py).
+The core scheduling logic lives in `Scheduler.build_plan()` in [pawpal_system.py](pawpal_system.py). See [build_plan](pawpal_system.py#L62) for the full implementation.
 
-**Step 1 — Gather all tasks**
-All tasks from all pets are combined into one list so they compete for the same time slots.
-
-**Step 2 — Sort by priority, then cost**
-Tasks run in order: HIGH first, then MEDIUM, then LOW. If two tasks have the same priority, the shorter one (`frequency × duration`) goes first.
-
-**Step 3 — Spread recurring tasks across slots**
-If a task repeats (e.g. feeding twice a day), it doesn't get scheduled back-to-back in the same slot. The first occurrence is placed starting from slot 0, the second starting from slot 1, and so on — so the task is spread throughout the day.
-
-**Step 4 — Fill each slot greedily**
-For each task occurrence, the algorithm checks slots in order and places it in the first one with enough time left. If nothing fits, the occurrence is skipped and a note is added to the plan explanation.
-
-**Step 5 — Return the plan**
-Scheduled items are sorted by start time, grouped by pet, and returned as a `Plan` with a written explanation.
-
-| Feature | How it's handled |
-|---------|-----------------|
-| Priority ordering | `HIGH → MEDIUM → LOW`; ties broken by shortest total cost first |
-| Recurring tasks | Occurrences spread across slots — round N starts from slot N |
-| Time conflicts | Greedy fill — each slot tracks remaining minutes; overflow moves to next slot |
-| Unschedulable tasks | Skipped occurrences listed in the plan explanation with a reason |
-| Output grouping | Scheduled tasks grouped by pet name in the returned `Plan` |
+| Step | What happens | Details |
+|------|-------------|---------|
+| 1 — Gather tasks | All tasks from all pets are combined into one list | Every task competes for the same shared time slots |
+| 2 — Sort | Tasks ordered HIGH → MEDIUM → LOW priority | Ties broken by shortest total cost (`frequency × duration`) first |
+| 3 — Spread recurring tasks | Repeated tasks are distributed across slots | Occurrence 0 starts at slot 0, occurrence 1 at slot 1, and so on |
+| 4 — Fill slots greedily | Each occurrence is placed in the first slot with enough time left | If no slot fits, the occurrence is skipped gracefully — no crash, a note is added to the plan explanation with the reason |
+| 5 — Return plan | Scheduled items sorted by start time and grouped by pet | Returned as a `Plan` with a full written explanation |
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+The app has four sections — Owner & Pets, Tasks, Owner Schedule, and Build Schedule — each building on the previous one. 
 
+User can add owner, assigns pets to owner, add tasks for the pets and their availability. User can then generate a schedule for the owner based on provided constraints and information.
+
+### Sample workflow.
 1. Add an owner by adding first name, last name and email.
 2. Add pet to owner using their name and species.
 3. Repeat step 2 as needed to add more pets to owner.
@@ -149,6 +150,26 @@ Describe your app in numbered steps so a reader can follow along without watchin
 5. Add owner's available time slot using start time and end time for current day (eg. morning slot of 8 am-10 am and evening slot of 6 pm-8 pm).
 6. Click 'Generate plan' to see the plan for the day.
 7. Add new tasks as needed and retrieve updated plan by clicking 'Generate plan' button again.
+
+Scheduler performs Priority-aware scheduling, Recurring task spread across different timeslots instead of one, Greedy slot filling and Graceful skipping if task does not fit into any slot. See Scheduling Algorithm section for more details.
+
+
+### Sample output 
+```
+priyankashah@Priyankas-MacBook-Air ai110-module2show-pawpal-starter % python3 main.py
+Today's schedule:
+Owner plan | 420 min available across 2 slot(s)
+Pets: Buddy, Whiskers
+
+  [Whiskers] feeding | 7:00 AM – 7:10 AM
+  [Buddy] feeding | 7:10 AM – 7:25 AM
+  [Buddy] walks | 7:25 AM – 8:10 AM
+  [Buddy] feeding | 6:00 PM – 6:15 PM
+  [Buddy] walks | 6:15 PM – 7:00 PM
+
+Summary: 130/420 min used.
+Conflict resolution: tasks ordered by priority (HIGH→MEDIUM→LOW), ties broken by shortest total duration first.
+```
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
 <video src="diagrams/screen_recording.mov" width="100%" controls>
