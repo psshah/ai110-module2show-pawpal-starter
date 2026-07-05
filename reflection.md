@@ -238,10 +238,10 @@ Building a working system from scratch, including translating requirements to de
 
 - If you had another iteration, what would you improve or redesign?
 Get clarity requirements better upfront - it caused a lot of churn in the design and implementation. 
-* I did not realize system needed to support multiple pets per owner.
+* I did not realize until later system needed to support multiple pets per owner.
 * I did not build it initially to regenerate plan as I did not see that requirement until later.
-* I built it for daily schedule use but did not anticipate it to be used for higher frequency (weekly).
-* I have not built it for mark_completion() as I do not understand that requirement fully.
+* I built it for daily schedule use but did not anticipate it to be used for higher frequency (weekly). Did not see that requirement till Phase-4.
+* I have not built it for mark_completion() as I do not understand that requirement fully. Did not see that requirement till Phase-4.
 
 **c. Key takeaway**
 

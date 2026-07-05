@@ -122,14 +122,51 @@ st.divider()
 
 st.subheader("Build Schedule")
 
+if "plan_rows" not in st.session_state:
+    st.session_state.plan_rows = []
+if "plan_explanation" not in st.session_state:
+    st.session_state.plan_explanation = ""
+
 if st.button("Generate schedule"):
     if st.session_state.owner:
         try:
             plan = st.session_state.owner.generate_plan()
+            st.session_state.plan_rows = [
+                {
+                    "Pet": pet_name,
+                    "Task": scheduled_task.task.type.value,
+                    "Start": scheduled_task.start_time.strftime("%-I:%M %p"),
+                    "End": scheduled_task.end_time.strftime("%-I:%M %p"),
+                    "Mark Completed": False,
+                }
+                for pet_name, scheduled_tasks in plan.task_list_by_pet.items()
+                for scheduled_task in scheduled_tasks
+            ]
+            st.session_state.plan_explanation = plan.explanation
             st.success("Schedule generated!")
-            st.markdown("**Plan explanation:**")
-            st.text(plan.explanation)
         except Exception as e:
             st.error(f"Error generating schedule: {e}")
     else:
         st.warning("Please add an owner first.")
+
+if st.session_state.plan_rows:
+    updated_rows = st.data_editor(
+        st.session_state.plan_rows,
+        column_config={
+            "Mark Completed": st.column_config.CheckboxColumn("Mark Completed", default=False)
+        },
+        disabled=["Pet", "Task", "Start", "End"],
+        hide_index=True,
+    )
+    for i, row in enumerate(updated_rows):
+        if row["Mark Completed"] and not st.session_state.plan_rows[i]["Mark Completed"]:
+            owner = st.session_state.owner
+            pet = next((p for p in owner.pets if p.name == row["Pet"]), None)
+            if pet:
+                task = next((t for t in pet.tasks if t.type.value == row["Task"]), None)
+                if task:
+                    task.mark_task_complete()
+                    st.toast(f"✅ [{row['Pet']}] {row['Task']} marked as completed!")
+    st.session_state.plan_rows = updated_rows
+    st.markdown("**Plan explanation:**")
+    st.text(st.session_state.plan_explanation)

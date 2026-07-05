@@ -22,6 +22,8 @@ classDiagram
         +int frequency
         +int durationMinutes
         +Priority priority
+        +bool completed
+        +markTaskComplete(): void
     }
 
     class Priority {
@@ -45,6 +47,7 @@ classDiagram
     class TimeSlot {
         +datetime startTime
         +datetime endTime
+        +float availableMinutes
     }
 
     class Scheduler {
@@ -54,13 +57,21 @@ classDiagram
 
     class Plan {
         +int id
-        +Map~string_List~Task~~ taskListByPet
+        +Map~string_List~ScheduledTask~~ taskListByPet
         +string explanation
     }
 
+    class ScheduledTask {
+        +Task task
+        +string petName
+        +datetime startTime
+        +datetime endTime
+    }
+
     Owner "1" --> "*" Pet : owns
-    Pet --> Task : has
-    Owner --> Scheduler : has
+    Pet "1" --> "*" Task : has
+    Owner "1" --> "0..1" Scheduler : has
     Scheduler --> TimeSlot : uses
-    Owner --> Plan : generates
-    Plan --> Task : contains
+    Scheduler --> Plan : creates
+    Plan --> ScheduledTask : contains
+    ScheduledTask --> Task : wraps

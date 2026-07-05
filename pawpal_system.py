@@ -154,6 +154,7 @@ class Task:
     frequency: int
     duration_minutes: int
     priority: Priority
+    completed: bool = False
 
     def __post_init__(self) -> None:
         """Validate frequency, priority, and task type values."""
@@ -163,6 +164,10 @@ class Task:
             raise ValueError(f"priority must be a Priority enum value, got {self.priority!r}")
         if not isinstance(self.type, TaskType):
             raise ValueError(f"type must be a TaskType enum value, got {self.type!r}")
+
+    def mark_task_complete(self) -> None:
+        """Mark this task as completed."""
+        self.completed = True
 
 
 @dataclass
